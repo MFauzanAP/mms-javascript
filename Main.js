@@ -215,12 +215,19 @@ function evaluate(c, i = 0) {
 	
 	//	Declare variables
 	const cell = grid[c[1]][c[0]];
-	let score = 0;
+	let score = 2 * API.mazeHeight();
 	
 	if (!cell) return 0;
 
 	//	Calculate distance to target and add to score
-	score += 1 / Math.sqrt(Math.pow(target[0] - c[0], 2) + Math.pow(target[1] - c[1], 2));
+	score -= 2 * Math.sqrt(Math.pow(target[0] - c[0], 2) + Math.pow(target[1] - c[1], 2));
+
+	//	Dont go back to previous cell
+	score -= prev === cell ? 1 : 0;
+	score -= cell[5] == '1' ? 1 : 0;
+
+	//	Prioritise crossroads
+	score += crossroads.includes(c.join('')) ? 1 : 0;
 
 	if (cell != '?') {
 
@@ -268,13 +275,6 @@ function evaluate(c, i = 0) {
 		score += max / numPaths;
 
 	}
-
-	//	Dont go back to previous cell
-	score += prev === cell ? 0 : 1;
-	score += cell[5] == '1' ? 0 : 1;
-
-	//	Prioritise crossroads
-	score += crossroads.includes(c.join('')) ? 1 : 0;
 
 	//	If center is undiscovered then prioritise going to center
 	//	Else if center is discovered then prioritise exploration

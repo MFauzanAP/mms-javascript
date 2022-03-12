@@ -6,6 +6,8 @@ let crossroads = {};
 let coords = [ 0, API.mazeHeight() - 1 ];
 let dir = 0;
 let prevCrossroads = [];
+let undiscovered = API.mazeWidth() * API.mazeHeight();
+let start = [ 0, API.mazeHeight() - 1 ];
 
 function log(text) {
 	console.error(text);
@@ -106,8 +108,7 @@ function main() {
 	API.setText(0, 0, 'START');
 
 	//	Main simulator loop
-	let test = 0;
-	while (test < 400) {
+	while (undiscovered > 0 || (undiscovered == 0 && coords.join(' ') != start.join(' '))) {
 
 		//	Get current cell
 		let cell = grid[coords[1]][coords[0]];
@@ -124,6 +125,9 @@ function main() {
 			cell = grid[coords[1]][coords[0]];
 			API.setColor(coords[0], API.mazeHeight() - coords[1] - 1, 'G');
 			API.setText(coords[0], API.mazeHeight() - coords[1] - 1, cell);
+
+			//	Decrement undiscovered count
+			undiscovered--;
 
 		}
 
@@ -216,9 +220,11 @@ function main() {
 
 		}
 
-		test++
-
 	}
+
+	//	All discovered
+	log('maze explored!');
+
 }
 
 main();

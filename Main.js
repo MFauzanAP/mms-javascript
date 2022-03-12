@@ -2,14 +2,13 @@ const API = require('./API');
 
 //	Declare variables
 let grid = [...new Array(API.mazeHeight()).keys()].map(y => [...new Array(API.mazeHeight()).keys()].map(x => `?`));
+let crossroads = {};
 let coords = [ 0, API.mazeHeight() - 1 ];
-let crossroads = [];
 let dir = 0;
-let target = [ Math.floor(API.mazeHeight() / 2), Math.floor(API.mazeHeight() / 2) ];
-let start = [ ...coords ];
-let center = null;
-let update = false;
-let prev = null;
+let prevCrossroads = [];
+let undiscovered = API.mazeWidth() * API.mazeHeight();
+let start = [ 0, API.mazeHeight() - 1 ];
+let explored = false;
 
 function log(text) {
 	console.error(text);
@@ -65,223 +64,208 @@ function faceDir(d) {
 	//	Update dir
 	dir = d;
 
-} 
+}
 
-function wallFront() {
+function getPossiblePaths(newCoords) {
 
-	//	If theres a wall in front
-	if (API.wallFront()) return true;
+	//	Keep count of possible paths
+	let paths = [];
 
-	//	Get front cell
-	let cell = null;
-	switch (dir) {
+	//	Get current cell
+	let cell = grid[coords[1]][coords[0]];
 
-		case 0:
-			cell = grid[coords[1] - 1][coords[0]];
-			break;
+	//	Check north
+	if (cell[0] == '0' && grid[newCoords[1] - 1]) {
+		const n = grid[newCoords[1] - 1][newCoords[0]];
+		if (n == '?') paths.push(0);
+	}
 
-		case 3:
-			cell = grid[coords[1]][coords[0] + 1];
-			break;
+	//	Check east
+	if (cell[1] == '0') {
+		const e = grid[newCoords[1]][newCoords[0] + 1];
+		if (e == '?') paths.push(3);
+	}
 
-		case 2:
-			cell = grid[coords[1] + 1][coords[0]];
-			break;
+	//	Check south
+	if (cell[2] == '0' && grid[newCoords[1] + 1]) {
+		const s = grid[newCoords[1] + 1][newCoords[0]];
+		if (s == '?') paths.push(2);
+	}
 
-		case 1:
-			cell = grid[coords[1]][coords[0] - 1];
-			break;
+	//	Check west
+	if (cell[3] == '0') {
+		const w = grid[newCoords[1]][newCoords[0] - 1];
+		if (w == '?') paths.push(1);
+	}
+
+	//	Return paths
+	return paths;
+
+}
+
+function followPath(dest, path) {
+
+	//	Declare list of actions to take
+	const actions = [];
+
+	//	Go through path
+	while (path != undefined) {
+
+		// log(path[0]);
+		// log(path[4]);
+
+		//	Add action to list
+		actions.push(path[4]);
+
+		//	Go to next path
+		path = path[1];
 
 	}
 
-	//	Check if cell is also a deadend
-	return cell[4] == '1';
+	//	Go through each action from reverse order
+	for (let i = actions.length - 2; i >= 0; i--) {
 
-}
-
-function wallBack() {
-
-	//	Get back cell
-	let cell = null;
-	switch (dir) {
-
-		case 0:
-			cell = grid[coords[1] + 1][coords[0]];
-			break;
-
-		case 3:
-			cell = grid[coords[1]][coords[0] - 1];
-			break;
-
-		case 2:
-			cell = grid[coords[1] - 1][coords[0]];
-			break;
-
-		case 1:
-			cell = grid[coords[1]][coords[0] + 1];
-			break;
+		//	Rotate and move
+		// log(actions[i])
+		faceDir(actions[i]);
+		moveForward();
+		if (explored) API.setText(coords[0], API.mazeHeight() - coords[1] - 1, '=+=');
 
 	}
 
-	//	Check if cell is also a deadend
-	return cell[4] == '1';
-
 }
 
-function wallLeft() {
+function pathfind(target) {
 
-	//	If theres a wall
-	if (API.wallLeft()) return true;
-
-	//	Get left cell
-	let cell = null;
-	switch (dir) {
-
-		case 0:
-			cell = grid[coords[1]][coords[0] - 1];
-			break;
-
-		case 3:
-			cell = grid[coords[1] - 1][coords[0]];
-			break;
-
-		case 2:
-			cell = grid[coords[1]][coords[0] + 1];
-			break;
-			
-		case 1:
-			cell = grid[coords[1] + 1][coords[0]];
-			break;
-
-	}
-
-	//	Check if cell is also a deadend
-	return cell[4] == '1';
-
-}
-
-function wallRight() {
-
-	//	If theres a wall
-	if (API.wallRight()) return true;
-
-	//	Get right cell
-	let cell = null;
-	switch (dir) {
-
-		case 0:
-			cell = grid[coords[1]][coords[0] + 1];
-			break;
-
-		case 3:
-			cell = grid[coords[1] + 1][coords[0]];
-			break;
-
-		case 2:
-			cell = grid[coords[1]][coords[0] - 1];
-			break;
-
-		case 1:
-			cell = grid[coords[1] - 1][coords[0]];
-			break;
-
-	}
-
-	//	Check if cell is also a deadend
-	return cell[4] == '1';
-
-}
-
-function getNumUndiscovered(c) {
-
-	//	Get cell
-	const cell = grid[c[1]][c[0]];
-
-	//	Discover cell
-	let count = 0;
-	if (cell[0] == '0') count += grid[c[1] - 1] ? (grid[c[1] - 1][c[0]] == '?' ? 1 : 0) : 0;
-	if (cell[1] == '0') count += grid[c[1]][c[0] + 1] == '?' ? 1 : 0;
-	if (cell[2] == '0') count += grid[c[1] + 1] ? (grid[c[1] + 1][c[0]] == '?' ? 1 : 0) : 0;
-	if (cell[3] == '0') count += grid[c[1]][c[0] - 1] == '?' ? 1 : 0;
-
-	//	Return count
-	return count;
-
-}
-
-function evaluate(c, i = 0) {
-
-	if (i == 3) return 0;
-	
 	//	Declare variables
-	const cell = grid[c[1]][c[0]];
-	let score = 0;
-	
-	if (!cell) return 0;
+	const open = [ [ coords, undefined, 0, 0, null ] ];
+	const close = [];
 
-	//	Calculate distance to target and add to score
-	score += 1 / Math.sqrt(Math.pow(target[0] - c[0], 2) + Math.pow(target[1] - c[1], 2));
+	//	Pathfinding loop
+	while (open.length > 0) {
 
-	if (cell != '?') {
+		//	Get node with least cost
+		const bestNode = open[open.length - 1];
 
-		//	Evaluate surrounding spaces
-		let max = -Infinity;
-		let numPaths = cell.match(/0/g).length;
-		if (cell[0] == '0') {
+		//	Remove from open list
+		open.pop();
 
-			//	Evaluate north cell
-			const score = evaluate([ c[0], c[1] - 1 ], i + 1);
+		//	Get current cell
+		const nodeCoords = bestNode[0];
+		const cell = grid[nodeCoords[1]][nodeCoords[0]];
 
-			//	Update max if better
-			if (score > max) max = score;
+		//	Check north
+		if (cell[0] == '0' && grid[nodeCoords[1] - 1]) {
+
+			//	Get node
+			let n = [ [ nodeCoords[0], nodeCoords[1] - 1 ], bestNode, 0, 0, 0 ];
+			if (n[0].join(' ') == target.join(' ')) {
+				followPath(close, n);
+				return;
+			}
+			
+			//	Calculate score
+			n[2] = bestNode[2] + 1;
+			n[3] = Math.abs(n[0][0] - target[0]) + Math.abs(n[0][1] - target[1]);
+
+			//	If this cell is alr in the open list and has a higher score
+			const openCell = open.filter(cell => cell[0].join(' ') == n[0].join(' '))[0];
+			const closeCell = close.filter(cell => cell[0].join(' ') == n[0].join(' '))[0];
+			if (!(openCell && openCell[2] + openCell[3] < n[2] + n[3]) && !(closeCell && closeCell[2] + closeCell[3] < n[2] + n[3])) {
+
+				//	Add to open list
+				open.push(n);
+				open.sort((a, b) => (b[2] + b[3]) - (a[2] + a[3]));
+
+			}
 
 		}
+
+		//	Check east
 		if (cell[1] == '0') {
 
-			//	Evaluate east cell
-			const score = evaluate([ c[0] + 1, c[1] ], i + 1);
+			//	Get node
+			let e = [ [ nodeCoords[0] + 1, nodeCoords[1] ], bestNode, 0, 0, 3 ];
+			if (e[0].join(' ') == target.join(' ')) {
+				followPath(close, e);
+				return;
+			}
+			
+			//	Calculate score
+			e[2] = bestNode[2] + 1;
+			e[3] = Math.abs(e[0][0] - target[0]) + Math.abs(e[0][1] - target[1]);
 
-			//	Update max if better
-			if (score > max) max = score;
+			//	If this cell is alr in the open list and has a higher score
+			const openCell = open.filter(cell => cell[0].join(' ') == e[0].join(' '))[0];
+			const closeCell = close.filter(cell => cell[0].join(' ') == e[0].join(' '))[0];
+			if (!(openCell && openCell[2] + openCell[3] < e[2] + e[3]) && !(closeCell && closeCell[2] + closeCell[3] < e[2] + e[3])) {
+
+				//	Add to open list
+				open.push(e);
+				open.sort((a, b) => (b[2] + b[3]) - (a[2] + a[3]));
+
+			}
 
 		}
-		if (cell[2] == '0') {
 
-			//	Evaluate south cell
-			const score = evaluate([ c[0], c[1] + 1 ], i + 1);
+		//	Check south
+		if (cell[2] == '0' && grid[nodeCoords[1] + 1]) {
 
-			//	Update max if better
-			if (score > max) max = score;
+			//	Get node
+			let s = [ [ nodeCoords[0], nodeCoords[1] + 1 ], bestNode, 0, 0, 2 ];
+			if (s[0].join(' ') == target.join(' ')) {
+				followPath(close, s);
+				return;
+			}
+			
+			//	Calculate score
+			s[2] = bestNode[2] + 1;
+			s[3] = Math.abs(s[0][0] - target[0]) + Math.abs(s[0][1] - target[1]);
+
+			//	If this cell is alr in the open list and has a higher score
+			const openCell = open.filter(cell => cell[0].join(' ') == s[0].join(' '))[0];
+			const closeCell = close.filter(cell => cell[0].join(' ') == s[0].join(' '))[0];
+			if (!(openCell && openCell[2] + openCell[3] < s[2] + s[3]) && !(closeCell && closeCell[2] + closeCell[3] < s[2] + s[3])) {
+
+				//	Add to open list
+				open.push(s);
+				open.sort((a, b) => (b[2] + b[3]) - (a[2] + a[3]));
+
+			}
 
 		}
+
+		//	Check west
 		if (cell[3] == '0') {
 
-			//	Evaluate west cell
-			const score = evaluate([ c[0] - 1, c[1] ], i + 1);
+			//	Get node
+			let w = [ [ nodeCoords[0] - 1, nodeCoords[1] ], bestNode, 0, 0, 1 ];
+			if (w[0].join(' ') == target.join(' ')) {
+				followPath(close, w);
+				return;
+			}
+			
+			//	Calculate score
+			w[2] = bestNode[2] + 1;
+			w[3] = Math.abs(w[0][0] - target[0]) + Math.abs(w[0][1] - target[1]);
 
-			//	Update max if better
-			if (score > max) max = score;
+			//	If this cell is alr in the open list and has a higher score
+			const openCell = open.filter(cell => cell[0].join(' ') == w[0].join(' '))[0];
+			const closeCell = close.filter(cell => cell[0].join(' ') == w[0].join(' '))[0];
+			if (!(openCell && openCell[2] + openCell[3] < w[2] + w[3]) && !(closeCell && closeCell[2] + closeCell[3] < w[2] + w[3])) {
+
+				//	Add to open list
+				open.push(w);
+				open.sort((a, b) => (b[2] + b[3]) - (a[2] + a[3]));
+
+			}
 
 		}
 
-		//	Add to score
-		score += max / numPaths;
+		//	Add to closed list
+		close.push(bestNode);
 
 	}
-
-	//	Dont go back to previous cell
-	score += prev === cell ? 0 : 1;
-	score += cell[5] == '1' ? 0 : 1;
-
-	//	Prioritise crossroads
-	score += crossroads.includes(c.join('')) ? 1 : 0;
-
-	//	If center is undiscovered then prioritise going to center
-	//	Else if center is discovered then prioritise exploration
-	score *= center ? 1 : (cell === '?' ? 2 : 1);
-
-	//	Return score
-	return score;
 
 }
 
@@ -290,147 +274,130 @@ function main() {
 	API.setColor(0, 0, 'G');
 	API.setText(0, 0, 'START');
 
-	//	Set starting cell
-	grid[coords[1]][coords[0]] = `001001`;
-	prev = `001001`;
-
-	//	Move forward
-	moveForward();
-
 	//	Main simulator loop
-	let test = 0;
-	while (true) {
+	while (undiscovered > 0 || (undiscovered == 0 && coords.join(' ') != start.join(' '))) {
 
 		//	Get current cell
 		let cell = grid[coords[1]][coords[0]];
-		let numPaths = 0;
-		
-		//	If this cell is undiscovered
-		if (cell === '?' || update) {
 
-			//	Discover cell
-			let walls = [ wallFront() ? 1 : 0, wallRight() ? 1 : 0, update ? (wallBack() ? 1 : 0) : 0, wallLeft() ? 1 : 0 ];
+		//	If this cell is undiscovered
+		if (cell === '?') {
+
+			//	Check for walls
+			let walls = [ API.wallFront() ? 1 : 0, API.wallRight() ? 1 : 0, 0, API.wallLeft() ? 1 : 0 ];
 			walls = [ ...walls.slice(dir), ...walls.slice(0, dir) ];
 
 			//	Add to grid
-			grid[coords[1]][coords[0]] = `${walls.join('')}${walls.join('').match(/0/g).length == 1 ? 1 : 0}`;
+			grid[coords[1]][coords[0]] = walls.join('');
 			cell = grid[coords[1]][coords[0]];
 			API.setColor(coords[0], API.mazeHeight() - coords[1] - 1, 'G');
-			API.setText(coords[0], API.mazeHeight() - coords[1] - 1, cell);
+			// API.setText(coords[0], API.mazeHeight() - coords[1] - 1, cell);
 
-			//	If this is the target then switch to start
-			if (target.join('') == coords.join('')) {
-				log('found!')
-				target = start;
-			}
-
-			//	Updated
-			update = true;
+			//	Decrement undiscovered count
+			undiscovered--;
 
 		}
-		
-		//	Calculate number of possible paths
-		numPaths = cell.slice(0, 4).match(/0/g).length;
 
-		//	Get number of undiscovered cells
-		let numUndiscovered = getNumUndiscovered(coords);
+		//	Get possible paths
+		const paths = getPossiblePaths(coords);
 
-		//	If there are no more possible paths then make this a deadend
-		if (numPaths == 1 || numUndiscovered == 0) {
-			cell = `${cell.slice(0, 4)}1${numUndiscovered == 0 ? 1 : 0}`;
-			grid[coords[1]][coords[0]] = cell;
+		//	If there are no more possible paths
+		if (paths.length === 0) {
+
+			pathfind(prevCrossroads[prevCrossroads.length - 1].split(' '));
+
+			// //	Get last crossroad
+			// const actions = crossroads[prevCrossroads[prevCrossroads.length - 1]] || [];
+
+			// //	Loop through each action and do the opposite
+			// for (let i = actions.length - 1; i >= 0; i--) {
+
+			// 	//	Select direction
+			// 	switch (actions[i]) {
+
+			// 		//	If north
+			// 		case 0:
+			// 			faceDir(2);
+			// 			moveForward();
+			// 			break;
+
+			// 		//	If east
+			// 		case 3:
+			// 			faceDir(1);
+			// 			moveForward();
+			// 			break;
+
+			// 		//	If south
+			// 		case 2:
+			// 			faceDir(0);
+			// 			moveForward();
+			// 			break;
+
+			// 		//	If west
+			// 		case 1:
+			// 			faceDir(3);
+			// 			moveForward();
+			// 			break;
+
+			// 	}
+
+			// }
+
+			//	Delete crossroad
+			delete crossroads[prevCrossroads[prevCrossroads.length - 1]];
+			prevCrossroads.splice(prevCrossroads.length - 1, 1);
+
+		}
+		else if (paths.length > 1) {
+
+			//	Pick random path
+			const chosen = paths[Math.floor(Math.random() * paths.length)];
+
+			//	Add this to list of crossroads
+			const keys = Object.keys(crossroads);
+			const list = crossroads[coords.join(' ')] || [];
+			list.push(chosen)
+			crossroads[coords.join(' ')] = list;
 			API.setColor(coords[0], API.mazeHeight() - coords[1] - 1, 'R');
-			API.setText(coords[0], API.mazeHeight() - coords[1] - 1, cell);
+			prevCrossroads.push(coords.join(' '));
 
-			//	Remove from crossroads if there
-			const coordsJoined = coords.join('');
-			crossroads.filter(c => c !== coordsJoined);
+			//	Rotate and move
+			faceDir(chosen);
+			moveForward();
 
 		}
 		else {
 
-			//	Add to list of crossroads
-			crossroads.push(coords.join(''));
+			//	Choose path
+			const chosen = paths[0];
 
-		}
+			//	Remove from list of crossroads
+			delete crossroads[coords.join(' ')];
 
-		//	Evaluate surrounding spaces
-		let max = -Infinity;
-		let curBest = [];
-		if (cell[0] == '0') {
-
-			//	Evaluate north cell
-			const score = evaluate([ coords[0], coords[1] - 1 ]);
-
-			//	Update max if better
-			if (score > max) {
-
-				max = score;
-				curBest = [0];
-
+			//	Add path to latest crossroad
+			const list = crossroads[prevCrossroads[prevCrossroads.length - 1]] || [];
+			list.push(chosen)
+			if (prevCrossroads.length) crossroads[prevCrossroads[prevCrossroads.length - 1]] = list;
+			else {
+				crossroads[coords.join(' ')] = list;
+				prevCrossroads.push(coords.join(' '));
 			}
-			else if (score == max) curBest.push(0);
+
+			//	Rotate and move
+			faceDir(chosen);
+			moveForward();
 
 		}
-		if (cell[1] == '0') {
-
-			//	Evaluate east cell
-			const score = evaluate([ coords[0] + 1, coords[1] ]);
-
-			//	Update max if better
-			if (score > max) {
-
-				max = score;
-				curBest = [3];
-
-			}
-			else if (score == max) curBest.push(3);
-
-		}
-		if (cell[2] == '0') {
-
-			//	Evaluate south cell
-			const score = evaluate([ coords[0], coords[1] + 1 ]);
-
-			//	Update max if better
-			if (score > max) {
-
-				max = score;
-				curBest = [2];
-
-			}
-			else if (score == max) curBest.push(2);
-
-		}
-		if (cell[3] == '0') {
-
-			//	Evaluate west cell
-			const score = evaluate([ coords[0] - 1, coords[1] ]);
-
-			//	Update max if better
-			if (score > max) {
-
-				max = score;
-				curBest = [1];
-
-			}
-			else if (score == max) curBest.push(1);
-
-		}
-
-		//	Pick random best move
-		curBest = curBest[Math.floor(Math.random() * curBest.length)];
-
-		//	Rotate and move
-		faceDir(curBest);
-		moveForward();
-
-		//	Set prev cell
-		prev = cell;
-
-		test++;
 
 	}
+
+	//	All discovered
+	log('maze explored!');
+	explored = true;
+	API.clearAllColor();
+	pathfind([ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) ]);
+	pathfind(start);
+
 }
 
 main();

@@ -8,6 +8,7 @@ let dir = 0;
 let prevCrossroads = [];
 let undiscovered = API.mazeWidth() * API.mazeHeight();
 let start = [ 0, API.mazeHeight() - 1 ];
+let explored = false;
 
 function log(text) {
 	console.error(text);
@@ -102,6 +103,172 @@ function getPossiblePaths(newCoords) {
 
 }
 
+function followPath(dest, path) {
+
+	//	Declare list of actions to take
+	const actions = [];
+
+	//	Go through path
+	while (path != undefined) {
+
+		// log(path[0]);
+		// log(path[4]);
+
+		//	Add action to list
+		actions.push(path[4]);
+
+		//	Go to next path
+		path = path[1];
+
+	}
+
+	//	Go through each action from reverse order
+	for (let i = actions.length - 2; i >= 0; i--) {
+
+		//	Rotate and move
+		// log(actions[i])
+		faceDir(actions[i]);
+		moveForward();
+		if (explored) API.setText(coords[0], API.mazeHeight() - coords[1] - 1, '=+=');
+
+	}
+
+}
+
+function pathfind(target) {
+
+	//	Declare variables
+	const open = [ [ coords, undefined, 0, 0, null ] ];
+	const close = [];
+
+	//	Pathfinding loop
+	while (open.length > 0) {
+
+		//	Get node with least cost
+		const bestNode = open[open.length - 1];
+
+		//	Remove from open list
+		open.pop();
+
+		//	Get current cell
+		const nodeCoords = bestNode[0];
+		const cell = grid[nodeCoords[1]][nodeCoords[0]];
+
+		//	Check north
+		if (cell[0] == '0' && grid[nodeCoords[1] - 1]) {
+
+			//	Get node
+			let n = [ [ nodeCoords[0], nodeCoords[1] - 1 ], bestNode, 0, 0, 0 ];
+			if (n[0].join(' ') == target.join(' ')) {
+				followPath(close, n);
+				return;
+			}
+			
+			//	Calculate score
+			n[2] = bestNode[2] + 1;
+			n[3] = Math.abs(n[0][0] - target[0]) + Math.abs(n[0][1] - target[1]);
+
+			//	If this cell is alr in the open list and has a higher score
+			const openCell = open.filter(cell => cell[0].join(' ') == n[0].join(' '))[0];
+			const closeCell = close.filter(cell => cell[0].join(' ') == n[0].join(' '))[0];
+			if (!(openCell && openCell[2] + openCell[3] < n[2] + n[3]) && !(closeCell && closeCell[2] + closeCell[3] < n[2] + n[3])) {
+
+				//	Add to open list
+				open.push(n);
+				open.sort((a, b) => (b[2] + b[3]) - (a[2] + a[3]));
+
+			}
+
+		}
+
+		//	Check east
+		if (cell[1] == '0') {
+
+			//	Get node
+			let e = [ [ nodeCoords[0] + 1, nodeCoords[1] ], bestNode, 0, 0, 3 ];
+			if (e[0].join(' ') == target.join(' ')) {
+				followPath(close, e);
+				return;
+			}
+			
+			//	Calculate score
+			e[2] = bestNode[2] + 1;
+			e[3] = Math.abs(e[0][0] - target[0]) + Math.abs(e[0][1] - target[1]);
+
+			//	If this cell is alr in the open list and has a higher score
+			const openCell = open.filter(cell => cell[0].join(' ') == e[0].join(' '))[0];
+			const closeCell = close.filter(cell => cell[0].join(' ') == e[0].join(' '))[0];
+			if (!(openCell && openCell[2] + openCell[3] < e[2] + e[3]) && !(closeCell && closeCell[2] + closeCell[3] < e[2] + e[3])) {
+
+				//	Add to open list
+				open.push(e);
+				open.sort((a, b) => (b[2] + b[3]) - (a[2] + a[3]));
+
+			}
+
+		}
+
+		//	Check south
+		if (cell[2] == '0' && grid[nodeCoords[1] + 1]) {
+
+			//	Get node
+			let s = [ [ nodeCoords[0], nodeCoords[1] + 1 ], bestNode, 0, 0, 2 ];
+			if (s[0].join(' ') == target.join(' ')) {
+				followPath(close, s);
+				return;
+			}
+			
+			//	Calculate score
+			s[2] = bestNode[2] + 1;
+			s[3] = Math.abs(s[0][0] - target[0]) + Math.abs(s[0][1] - target[1]);
+
+			//	If this cell is alr in the open list and has a higher score
+			const openCell = open.filter(cell => cell[0].join(' ') == s[0].join(' '))[0];
+			const closeCell = close.filter(cell => cell[0].join(' ') == s[0].join(' '))[0];
+			if (!(openCell && openCell[2] + openCell[3] < s[2] + s[3]) && !(closeCell && closeCell[2] + closeCell[3] < s[2] + s[3])) {
+
+				//	Add to open list
+				open.push(s);
+				open.sort((a, b) => (b[2] + b[3]) - (a[2] + a[3]));
+
+			}
+
+		}
+
+		//	Check west
+		if (cell[3] == '0') {
+
+			//	Get node
+			let w = [ [ nodeCoords[0] - 1, nodeCoords[1] ], bestNode, 0, 0, 1 ];
+			if (w[0].join(' ') == target.join(' ')) {
+				followPath(close, w);
+				return;
+			}
+			
+			//	Calculate score
+			w[2] = bestNode[2] + 1;
+			w[3] = Math.abs(w[0][0] - target[0]) + Math.abs(w[0][1] - target[1]);
+
+			//	If this cell is alr in the open list and has a higher score
+			const openCell = open.filter(cell => cell[0].join(' ') == w[0].join(' '))[0];
+			const closeCell = close.filter(cell => cell[0].join(' ') == w[0].join(' '))[0];
+			if (!(openCell && openCell[2] + openCell[3] < w[2] + w[3]) && !(closeCell && closeCell[2] + closeCell[3] < w[2] + w[3])) {
+
+				//	Add to open list
+				open.push(w);
+				open.sort((a, b) => (b[2] + b[3]) - (a[2] + a[3]));
+
+			}
+
+		}
+
+		//	Add to closed list
+		close.push(bestNode);
+
+	}
+
+}
+
 function main() {
 	log('Running...');
 	API.setColor(0, 0, 'G');
@@ -124,7 +291,7 @@ function main() {
 			grid[coords[1]][coords[0]] = walls.join('');
 			cell = grid[coords[1]][coords[0]];
 			API.setColor(coords[0], API.mazeHeight() - coords[1] - 1, 'G');
-			API.setText(coords[0], API.mazeHeight() - coords[1] - 1, cell);
+			// API.setText(coords[0], API.mazeHeight() - coords[1] - 1, cell);
 
 			//	Decrement undiscovered count
 			undiscovered--;
@@ -137,42 +304,44 @@ function main() {
 		//	If there are no more possible paths
 		if (paths.length === 0) {
 
-			//	Get last crossroad
-			const actions = crossroads[prevCrossroads[prevCrossroads.length - 1]] || [];
+			pathfind(prevCrossroads[prevCrossroads.length - 1].split(' '));
 
-			//	Loop through each action and do the opposite
-			for (let i = actions.length - 1; i >= 0; i--) {
+			// //	Get last crossroad
+			// const actions = crossroads[prevCrossroads[prevCrossroads.length - 1]] || [];
 
-				//	Select direction
-				switch (actions[i]) {
+			// //	Loop through each action and do the opposite
+			// for (let i = actions.length - 1; i >= 0; i--) {
 
-					//	If north
-					case 0:
-						faceDir(2);
-						moveForward();
-						break;
+			// 	//	Select direction
+			// 	switch (actions[i]) {
 
-					//	If east
-					case 3:
-						faceDir(1);
-						moveForward();
-						break;
+			// 		//	If north
+			// 		case 0:
+			// 			faceDir(2);
+			// 			moveForward();
+			// 			break;
 
-					//	If south
-					case 2:
-						faceDir(0);
-						moveForward();
-						break;
+			// 		//	If east
+			// 		case 3:
+			// 			faceDir(1);
+			// 			moveForward();
+			// 			break;
 
-					//	If west
-					case 1:
-						faceDir(3);
-						moveForward();
-						break;
+			// 		//	If south
+			// 		case 2:
+			// 			faceDir(0);
+			// 			moveForward();
+			// 			break;
 
-				}
+			// 		//	If west
+			// 		case 1:
+			// 			faceDir(3);
+			// 			moveForward();
+			// 			break;
 
-			}
+			// 	}
+
+			// }
 
 			//	Delete crossroad
 			delete crossroads[prevCrossroads[prevCrossroads.length - 1]];
@@ -224,6 +393,10 @@ function main() {
 
 	//	All discovered
 	log('maze explored!');
+	explored = true;
+	API.clearAllColor();
+	pathfind([ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) ]);
+	pathfind(start);
 
 }
 

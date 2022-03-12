@@ -17,7 +17,7 @@ function log(text) {
 function moveForward(n = 1) {
 
 	//	Move forward
-	API.moveForward();
+	API.moveForward(n);
 
 	//	Select direction
 	switch (dir) {
@@ -125,9 +125,27 @@ function followPath(dest, path) {
 	//	Go through each action from reverse order
 	for (let i = actions.length - 2; i >= 0; i--) {
 
+		//	Go through the next few same actions
+		const action = actions[i];
+		let temp = actions[i];
+		let j = i;
+		let count = 0;
+		while (temp == action) {
+
+			//	Get the next action
+			temp = actions[j];
+			if (temp !== action) break;
+
+			//	Increment count and j
+			j--;
+			count++;
+
+		}
+
 		//	Rotate and move
 		// log(actions[i])
-		faceDir(actions[i]);
+		log(count);
+		faceDir(action);
 		moveForward();
 		if (explored) API.setText(coords[0], API.mazeHeight() - coords[1] - 1, '=+=');
 

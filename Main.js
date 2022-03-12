@@ -111,9 +111,6 @@ function followPath(dest, path) {
 	//	Go through path
 	while (path != undefined) {
 
-		// log(path[0]);
-		// log(path[4]);
-
 		//	Add action to list
 		actions.push(path[4]);
 
@@ -143,8 +140,6 @@ function followPath(dest, path) {
 		}
 
 		//	Rotate and move
-		// log(actions[i])
-		log(count);
 		faceDir(action);
 		moveForward();
 		if (explored) API.setText(coords[0], API.mazeHeight() - coords[1] - 1, '=+=');
@@ -309,7 +304,6 @@ function main() {
 			grid[coords[1]][coords[0]] = walls.join('');
 			cell = grid[coords[1]][coords[0]];
 			API.setColor(coords[0], API.mazeHeight() - coords[1] - 1, 'G');
-			// API.setText(coords[0], API.mazeHeight() - coords[1] - 1, cell);
 
 			//	Decrement undiscovered count
 			undiscovered--;
@@ -323,43 +317,6 @@ function main() {
 		if (paths.length === 0) {
 
 			pathfind(prevCrossroads[prevCrossroads.length - 1].split(' '));
-
-			// //	Get last crossroad
-			// const actions = crossroads[prevCrossroads[prevCrossroads.length - 1]] || [];
-
-			// //	Loop through each action and do the opposite
-			// for (let i = actions.length - 1; i >= 0; i--) {
-
-			// 	//	Select direction
-			// 	switch (actions[i]) {
-
-			// 		//	If north
-			// 		case 0:
-			// 			faceDir(2);
-			// 			moveForward();
-			// 			break;
-
-			// 		//	If east
-			// 		case 3:
-			// 			faceDir(1);
-			// 			moveForward();
-			// 			break;
-
-			// 		//	If south
-			// 		case 2:
-			// 			faceDir(0);
-			// 			moveForward();
-			// 			break;
-
-			// 		//	If west
-			// 		case 1:
-			// 			faceDir(3);
-			// 			moveForward();
-			// 			break;
-
-			// 	}
-
-			// }
 
 			//	Delete crossroad
 			delete crossroads[prevCrossroads[prevCrossroads.length - 1]];

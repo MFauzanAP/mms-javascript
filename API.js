@@ -105,7 +105,7 @@ function clearText(x, y) {
 }
 
 function clearAllText() {
-    System.out.println('clearAllText');
+    console.log('clearAllText');
 }
 
 function wasReset() {

@@ -142,7 +142,7 @@ function followPath(dest, path) {
 		//	Rotate and move
 		faceDir(action);
 		moveForward();
-		if (explored) API.setText(coords[0], API.mazeHeight() - coords[1] - 1, '=+=');
+		if (explored) API.setColor(coords[0], API.mazeHeight() - coords[1] - 1, 'G');
 
 	}
 
@@ -300,10 +300,16 @@ function main() {
 			let walls = [ API.wallFront() ? 1 : 0, API.wallRight() ? 1 : 0, 0, API.wallLeft() ? 1 : 0 ];
 			walls = [ ...walls.slice(dir), ...walls.slice(0, dir) ];
 
+			if (walls[0] == 1) API.setWall(coords[0], API.mazeHeight() - coords[1] - 1, 'n');
+			if (walls[1] == 1) API.setWall(coords[0], API.mazeHeight() - coords[1] - 1, 'e');
+			if (walls[2] == 1) API.setWall(coords[0], API.mazeHeight() - coords[1] - 1, 's');
+			if (walls[3] == 1) API.setWall(coords[0], API.mazeHeight() - coords[1] - 1, 'w');
+
 			//	Add to grid
 			grid[coords[1]][coords[0]] = walls.join('');
 			cell = grid[coords[1]][coords[0]];
 			API.setColor(coords[0], API.mazeHeight() - coords[1] - 1, 'G');
+			API.setText(coords[0], API.mazeHeight() - coords[1] - 1, cell);
 
 			//	Decrement undiscovered count
 			undiscovered--;
@@ -370,6 +376,7 @@ function main() {
 	log('maze explored!');
 	explored = true;
 	API.clearAllColor();
+	API.clearAllText();
 	pathfind([ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) ]);
 	pathfind(start);
 

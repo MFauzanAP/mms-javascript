@@ -151,7 +151,7 @@ function updateMaze(target) {
 
 				//	Update cell in grid
 				grid[coord[1]][coord[0]] = [ cell[0], dist ];
-				API.setText(coord[0], coord[1], dist);
+				API.setText(coord[0], API.mazeHeight() - coord[1] - 1, dist);
 
 				//	Get adjacent cells
 				const n = [ coord[0], coord[1] - 1 ];

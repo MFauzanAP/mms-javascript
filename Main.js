@@ -2,13 +2,18 @@ const API = require('./API');
 
 //	Declare variables
 let grid = [...new Array(API.mazeHeight()).keys()].map(y => [...new Array(API.mazeHeight()).keys()].map(x => [ '0000', 0 ]));
-let crossroads = {};
+let started = false;
 let coords = [ 0, API.mazeHeight() - 1 ];
 let dir = 0;
 let prevCrossroads = [];
 let undiscovered = API.mazeWidth() * API.mazeHeight();
 let start = [ 0, API.mazeHeight() - 1 ];
-let explored = false;
+let target = [
+	[ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) ].join(' '),
+	[ Math.floor(API.mazeWidth() / 2) - 1, Math.floor(API.mazeHeight() / 2) ].join(' '),
+	[ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) - 1 ].join(' '),
+	[ Math.floor(API.mazeWidth() / 2) - 1, Math.floor(API.mazeHeight() / 2) - 1 ].join(' '),
+];
 
 function log(text) {
 	console.error(text);
@@ -66,43 +71,6 @@ function faceDir(d) {
 
 }
 
-function getPossiblePaths(newCoords) {
-
-	//	Keep count of possible paths
-	let paths = [];
-
-	//	Get current cell
-	let cell = grid[coords[1]][coords[0]];
-
-	//	Check north
-	if (cell[0] == '0' && grid[newCoords[1] - 1]) {
-		const n = grid[newCoords[1] - 1][newCoords[0]];
-		if (n == '?') paths.push(0);
-	}
-
-	//	Check east
-	if (cell[1] == '0') {
-		const e = grid[newCoords[1]][newCoords[0] + 1];
-		if (e == '?') paths.push(3);
-	}
-
-	//	Check south
-	if (cell[2] == '0' && grid[newCoords[1] + 1]) {
-		const s = grid[newCoords[1] + 1][newCoords[0]];
-		if (s == '?') paths.push(2);
-	}
-
-	//	Check west
-	if (cell[3] == '0') {
-		const w = grid[newCoords[1]][newCoords[0] - 1];
-		if (w == '?') paths.push(1);
-	}
-
-	//	Return paths
-	return paths;
-
-}
-
 function withinBounds(coords) {
 
 	//	Check if too far north
@@ -128,7 +96,7 @@ function checkWalls() {
 	let walls = [
 		API.wallFront() ? 1 : 0,
 		API.wallRight() ? 1 : 0,
-		coords.join(' ') == start.join(' ') ? 1 : 0,
+		coords.join(' ') == start.join(' ') && !started ? 1 : 0,
 		API.wallLeft() ? 1 : 0
 	];
 
@@ -142,6 +110,9 @@ function checkWalls() {
 	if (walls[2] == 1) API.setWall(coords[0], API.mazeHeight() - coords[1] - 1, 's');
 	if (walls[3] == 1) API.setWall(coords[0], API.mazeHeight() - coords[1] - 1, 'w');
 
+	//	Set flag
+	started = true;
+
 }
 
 function updateMaze(target) {
@@ -150,7 +121,7 @@ function updateMaze(target) {
 	// API.clearAllText();
 
 	//	Declare variables
-	let memo = {};
+	let memo = { };
 	let list = target;
 	let dist = 0;
 
@@ -180,7 +151,7 @@ function updateMaze(target) {
 
 				//	Update cell in grid
 				grid[coord[1]][coord[0]] = [ cell[0], dist ];
-				// API.setText(coord[0], coord[1], dist);
+				API.setText(coord[0], coord[1], dist);
 
 				//	Get adjacent cells
 				const n = [ coord[0], coord[1] - 1 ];
@@ -232,10 +203,10 @@ function moveToLeastValue() {
 	//	Get the cell with the least value
 	let min = Infinity;
 	let dir = 0;
-	if (n && n[1] < min) { min = n[1]; dir = 0; }
-	if (e && e[1] < min) { min = e[1]; dir = 3; }
-	if (s && s[1] < min) { min = s[1]; dir = 2; }
-	if (w && w[1] < min) { min = w[1]; dir = 1; }
+	if (n && n.join(' ') != start.join(' ') && n[1] < min) { min = n[1]; dir = 0; }
+	if (e && e.join(' ') != start.join(' ') && e[1] < min) { min = e[1]; dir = 3; }
+	if (s && s.join(' ') != start.join(' ') && s[1] < min) { min = s[1]; dir = 2; }
+	if (w && w.join(' ') != start.join(' ') && w[1] < min) { min = w[1]; dir = 1; }
 
 	//	Rotate and move robot
 	faceDir(dir);
@@ -249,8 +220,7 @@ function main() {
 	API.setText(0, 0, 'START');
 
 	//	Main loop
-	test = 0;
-	while (test < 150) {
+	while (!target.includes(coords.join(' '))) {
 
 		//	Check for walls
 		checkWalls();
@@ -266,7 +236,52 @@ function main() {
 		//	Move to cell with next smallest value
 		moveToLeastValue();
 
-		test++;
+	}
+
+	//	Go back to start
+	while (start.join(' ') != coords.join(' ')) {
+
+		//	Check for walls
+		checkWalls();
+
+		//	Update maze values
+		updateMaze([ start ]);
+
+		//	Move to cell with next smallest value
+		moveToLeastValue();
+
+	}
+
+	//	Go to center
+	while (!target.includes(coords.join(' '))) {
+
+		//	Check for walls
+		checkWalls();
+
+		//	Update maze values
+		updateMaze([
+			[ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) ],
+			[ Math.floor(API.mazeWidth() / 2) - 1, Math.floor(API.mazeHeight() / 2) ],
+			[ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) - 1 ],
+			[ Math.floor(API.mazeWidth() / 2) - 1, Math.floor(API.mazeHeight() / 2) - 1 ],
+		]);
+
+		//	Move to cell with next smallest value
+		moveToLeastValue();
+
+	}
+
+	//	Go back to start
+	while (start.join(' ') != coords.join(' ')) {
+
+		//	Check for walls
+		checkWalls();
+
+		//	Update maze values
+		updateMaze([ start ]);
+
+		//	Move to cell with next smallest value
+		moveToLeastValue();
 
 	}
 

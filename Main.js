@@ -321,9 +321,6 @@ function generateFloodGrid(target) {
 			//	Get coords
 			const coord = list[i];
 
-			//	Get cell
-			const cell = grid[coord[1]][coord[0]];
-
 			//	Get coordinates in string form
 			const stringCoords = list[i].join(' ');
 
@@ -371,7 +368,7 @@ function moveToLeastValue() {
 
 	//	Keep looping until robot is at target
 	while (floodGrid[coords[1]][coords[0]] != 0) {
-	
+
 		//	Get current cell
 		const cell = grid[coords[1]][coords[0]];
 
@@ -437,7 +434,42 @@ function main() {
 		//	If there are no more possible paths
 		if (paths.length === 0) {
 
-			pathfind(prevCrossroads[prevCrossroads.length - 1].split(' '));
+			//	Get last crossroad
+			const actions = crossroads[prevCrossroads[prevCrossroads.length - 1]] || [];
+
+			//	Loop through each action and do the opposite
+			for (let i = actions.length - 1; i >= 0; i--) {
+
+				//	Select direction
+				switch (actions[i]) {
+
+					//	If north
+					case 0:
+						faceDir(2);
+						moveForward();
+						break;
+
+					//	If east
+					case 3:
+						faceDir(1);
+						moveForward();
+						break;
+
+					//	If south
+					case 2:
+						faceDir(0);
+						moveForward();
+						break;
+
+					//	If west
+					case 1:
+						faceDir(3);
+						moveForward();
+						break;
+
+				}
+
+			}
 
 			//	Delete crossroad
 			delete crossroads[prevCrossroads[prevCrossroads.length - 1]];
@@ -492,11 +524,19 @@ function main() {
 	explored = true;
 	API.clearAllColor();
 	API.clearAllText();
+
+	//	Move to center
 	generateFloodGrid([
 		[ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) ],
 		[ Math.floor(API.mazeWidth() / 2) - 1, Math.floor(API.mazeHeight() / 2) ],
 		[ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) - 1 ],
 		[ Math.floor(API.mazeWidth() / 2) - 1, Math.floor(API.mazeHeight() / 2) - 1 ],
+	]);
+	moveToLeastValue();
+	
+	//	Move to start
+	generateFloodGrid([
+		start,
 	]);
 	moveToLeastValue();
 

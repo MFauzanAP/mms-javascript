@@ -2,6 +2,7 @@ const API = require('./API');
 
 //	Declare variables
 let grid = [...new Array(API.mazeHeight()).keys()].map(y => [...new Array(API.mazeHeight()).keys()].map(x => `?`));
+let floodGrid = [...new Array(API.mazeHeight()).keys()].map(y => [...new Array(API.mazeHeight()).keys()].map(x => 0));
 let crossroads = {};
 let coords = [ 0, API.mazeHeight() - 1 ];
 let dir = 0;
@@ -63,6 +64,25 @@ function faceDir(d) {
 
 	//	Update dir
 	dir = d;
+
+}
+
+function withinBounds(coords) {
+
+	//	Check if too far north
+	if (coords[1] < 0) return false;
+
+	//	Check if too far south
+	if (coords[1] >= API.mazeHeight()) return false;
+
+	//	Check if too far west
+	if (coords[0] < 0) return false;
+
+	//	Check if too far east
+	if (coords[0] >= API.mazeWidth()) return false;
+
+	//	Else return true
+	return true;
 
 }
 
@@ -282,6 +302,101 @@ function pathfind(target) {
 
 }
 
+function generateFloodGrid(target) {
+
+	//	Declare variables
+	let memo = { };
+	let list = target;
+	let dist = 0;
+
+	//	Keep repeating untill all cells are updated
+	while (Object.keys(memo).length < API.mazeWidth() * API.mazeHeight()) {
+
+		//	Declare temporary list
+		const tempList = [];
+
+		//	Loop through the list of cells to update
+		for (let i = 0; i < list.length; i++) {
+
+			//	Get coords
+			const coord = list[i];
+
+			//	Get cell
+			const cell = grid[coord[1]][coord[0]];
+
+			//	Get coordinates in string form
+			const stringCoords = list[i].join(' ');
+
+			//	Check if this cell is already mapped
+			if (memo[stringCoords] == undefined) { 
+				
+				//	Add to memo
+				memo[stringCoords] = dist;
+
+				//	Update cell in grid
+				floodGrid[coord[1]][coord[0]] = dist;
+				API.setText(coord[0], API.mazeHeight() - coord[1] - 1, dist);
+
+				//	Get adjacent cells
+				const n = [ coord[0], coord[1] - 1 ];
+				const e = [ coord[0] + 1, coord[1] ];
+				const s = [ coord[0], coord[1] + 1 ];
+				const w = [ coord[0] - 1, coord[1] ];
+
+				//	Add adjacent cells to temp list if not already in list or memo and if accessible
+				if (withinBounds(n) && memo[n.join(' ')] == undefined && grid[n[1]][n[0]][2] != '1') tempList.push(n);
+				if (withinBounds(e) && memo[e.join(' ')] == undefined && grid[e[1]][e[0]][3] != '1') tempList.push(e);
+				if (withinBounds(s) && memo[s.join(' ')] == undefined && grid[s[1]][s[0]][0] != '1') tempList.push(s);
+				if (withinBounds(w) && memo[w.join(' ')] == undefined && grid[w[1]][w[0]][1] != '1') tempList.push(w);
+				// if (withinBounds(n) && grid[n[1]][n[0]][0][2] == '1') { log(n); log('n'); log(tempList.includes(n)) }
+				// if (withinBounds(e) && grid[e[1]][e[0]][0][3] == '1') { log(e); log('e'); log(tempList.includes(e)) }
+				// if (withinBounds(s) && grid[s[1]][s[0]][0][0] == '1') { log(s); log('s'); log(tempList.includes(s)) }
+				// if (withinBounds(w) && grid[w[1]][w[0]][0][1] == '1') { log(w); log('w'); log(tempList.includes(w)) }
+
+			}
+
+		}
+
+		//	Replace old list with new one
+		list = [ ...tempList ];
+
+		//	Increment distance
+		dist++;
+
+	}
+
+}
+
+function moveToLeastValue() {
+
+	//	Keep looping until robot is at target
+	while (floodGrid[coords[1]][coords[0]] != 0) {
+	
+		//	Get current cell
+		const cell = grid[coords[1]][coords[0]];
+
+		//	Get adjacent coords
+		const coordN = [ coords[0], coords[1] - 1 ];
+		const coordE = [ coords[0] + 1, coords[1] ];
+		const coordS = [ coords[0], coords[1] + 1 ];
+		const coordW = [ coords[0] - 1, coords[1] ];
+
+		//	Get the cell with the least value
+		let min = Infinity;
+		let dir = 0;
+		if (withinBounds(coordN) && cell[0] != '1' && floodGrid[coordN[1]][coordN[0]] < min) { min = floodGrid[coordN[1]][coordN[0]]; dir = 0; }
+		if (withinBounds(coordE) && cell[1] != '1' && floodGrid[coordE[1]][coordE[0]] < min) { min = floodGrid[coordE[1]][coordE[0]]; dir = 3; }
+		if (withinBounds(coordS) && cell[2] != '1' && floodGrid[coordS[1]][coordS[0]] < min) { min = floodGrid[coordS[1]][coordS[0]]; dir = 2; }
+		if (withinBounds(coordW) && cell[3] != '1' && floodGrid[coordW[1]][coordW[0]] < min) { min = floodGrid[coordW[1]][coordW[0]]; dir = 1; }
+
+		//	Rotate and move robot
+		faceDir(dir);
+		moveForward();
+
+	}
+
+}
+
 function main() {
 	log('Running...');
 	API.setColor(0, 0, 'G');
@@ -377,8 +492,13 @@ function main() {
 	explored = true;
 	API.clearAllColor();
 	API.clearAllText();
-	pathfind([ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) ]);
-	pathfind(start);
+	generateFloodGrid([
+		[ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) ],
+		[ Math.floor(API.mazeWidth() / 2) - 1, Math.floor(API.mazeHeight() / 2) ],
+		[ Math.floor(API.mazeWidth() / 2), Math.floor(API.mazeHeight() / 2) - 1 ],
+		[ Math.floor(API.mazeWidth() / 2) - 1, Math.floor(API.mazeHeight() / 2) - 1 ],
+	]);
+	moveToLeastValue();
 
 }
 

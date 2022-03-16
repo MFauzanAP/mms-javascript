@@ -1,7 +1,7 @@
 const API = require('./API');
 
 //	Declare variables
-let grid = [...new Array(API.mazeHeight()).keys()].map(y => [...new Array(API.mazeHeight()).keys()].map(x => `?`));
+let grid = [...new Array(API.mazeHeight()).keys()].map(y => [...new Array(API.mazeHeight()).keys()].map(x => '?'));
 let floodGrid = [...new Array(API.mazeHeight()).keys()].map(y => [...new Array(API.mazeHeight()).keys()].map(x => 0));
 let crossroads = {};
 let coords = [ 0, API.mazeHeight() - 1 ];
@@ -332,7 +332,6 @@ function generateFloodGrid(target) {
 
 				//	Update cell in grid
 				floodGrid[coord[1]][coord[0]] = dist;
-				API.setText(coord[0], API.mazeHeight() - coord[1] - 1, dist);
 
 				//	Get adjacent cells
 				const n = [ coord[0], coord[1] - 1 ];
@@ -345,10 +344,6 @@ function generateFloodGrid(target) {
 				if (withinBounds(e) && memo[e.join(' ')] == undefined && grid[e[1]][e[0]][3] != '1') tempList.push(e);
 				if (withinBounds(s) && memo[s.join(' ')] == undefined && grid[s[1]][s[0]][0] != '1') tempList.push(s);
 				if (withinBounds(w) && memo[w.join(' ')] == undefined && grid[w[1]][w[0]][1] != '1') tempList.push(w);
-				// if (withinBounds(n) && grid[n[1]][n[0]][0][2] == '1') { log(n); log('n'); log(tempList.includes(n)) }
-				// if (withinBounds(e) && grid[e[1]][e[0]][0][3] == '1') { log(e); log('e'); log(tempList.includes(e)) }
-				// if (withinBounds(s) && grid[s[1]][s[0]][0][0] == '1') { log(s); log('s'); log(tempList.includes(s)) }
-				// if (withinBounds(w) && grid[w[1]][w[0]][0][1] == '1') { log(w); log('w'); log(tempList.includes(w)) }
 
 			}
 
@@ -406,7 +401,7 @@ function main() {
 		let cell = grid[coords[1]][coords[0]];
 
 		//	If this cell is undiscovered
-		if (cell === '?') {
+		if (cell == '?') {
 
 			//	Check for walls
 			let walls = [ API.wallFront() ? 1 : 0, API.wallRight() ? 1 : 0, 0, API.wallLeft() ? 1 : 0 ];
@@ -434,42 +429,11 @@ function main() {
 		//	If there are no more possible paths
 		if (paths.length === 0) {
 
-			//	Get last crossroad
-			const actions = crossroads[prevCrossroads[prevCrossroads.length - 1]] || [];
-
-			//	Loop through each action and do the opposite
-			for (let i = actions.length - 1; i >= 0; i--) {
-
-				//	Select direction
-				switch (actions[i]) {
-
-					//	If north
-					case 0:
-						faceDir(2);
-						moveForward();
-						break;
-
-					//	If east
-					case 3:
-						faceDir(1);
-						moveForward();
-						break;
-
-					//	If south
-					case 2:
-						faceDir(0);
-						moveForward();
-						break;
-
-					//	If west
-					case 1:
-						faceDir(3);
-						moveForward();
-						break;
-
-				}
-
-			}
+			//	Go back to previous crossroad
+			generateFloodGrid([
+				prevCrossroads[prevCrossroads.length - 1].split(' ').map(elem => parseInt(elem)),
+			]);
+			moveToLeastValue();
 
 			//	Delete crossroad
 			delete crossroads[prevCrossroads[prevCrossroads.length - 1]];
